@@ -1,0 +1,57 @@
+/dist
+.env
+.DS_Store
+/uploads
+/node_modules
+yarn-error.log
+
+.idea
+
+coverage
+
+!src/**
+
+./tsconfig.tsbuildinfo
+medusa-db.sql
+build
+.cache
+
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+.medusa
+
+.qodo
+node_modules/
+.terraform/
+
+# Ignore Terraform state files and crash logs
+*.tfstate
+*.tfstate.backup
+crash.log
+
+# Ignore variable secrets and config overrides
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore Terraform's local working directory
+.terraform/
+.terraform.lock.hcl
+
+# Ignore plan output
+terraform.tfplan
+
+# Ignore core dump or debugging files
+*.log
+*.bak
+*.swp
+*.tmp
+*.zip
