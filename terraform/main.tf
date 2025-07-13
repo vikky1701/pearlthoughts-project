@@ -80,7 +80,7 @@ resource "aws_db_instance" "medusa_db" {
   engine                 = "postgres"
   engine_version         = "14.17"
   instance_class         = "db.t3.micro"
-  name                   = var.db_name
+  db_name                = var.db_name  # Changed from 'name' to 'db_name'
   username               = var.db_user
   password               = var.db_password
   skip_final_snapshot    = true
@@ -94,14 +94,38 @@ resource "aws_ecs_cluster" "medusa_cluster" {
   name = "medusa-cluster"
 }
 
-# ECS Task Definition
+# ECS Execution Role
+resource "aws_iam_role" "ecs_execution_role" {
+  name = "medusa-ecs-execution-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
+  role       = aws_iam_role.ecs_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+# ECS Task Definition (with execution role)
 resource "aws_ecs_task_definition" "medusa_task" {
   family                   = "medusa-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "512"
   memory                   = "1024"
-
+  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  
   container_definitions = jsonencode([{
     name      = "medusa",
     image     = var.medusa_image,
@@ -132,8 +156,8 @@ resource "aws_ecs_service" "medusa_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = aws_subnet.public_subnets[*].id
-    security_groups = [aws_security_group.ecs_sg.id]
+    subnets          = aws_subnet.public_subnets[*].id
+    security_groups  = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
 
