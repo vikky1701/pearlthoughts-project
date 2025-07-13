@@ -2,21 +2,22 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Fetch availability zones
+# Fetch available availability zones
 data "aws_availability_zones" "available" {}
 
-# VPC
+# Create a VPC
 resource "aws_vpc" "medusa_vpc" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_support   = true
-  enable_dns_hostnames = true
+  cidr_block = "10.0.0.0/16"
+
+  enable_dns_support   = true   # ✅ Enable DNS resolution
+  enable_dns_hostnames = true   # ✅ Enable DNS hostnames
 
   tags = {
     Name = "medusa-vpc"
   }
 }
 
-# Public Subnets
+# Create Public Subnets
 resource "aws_subnet" "public_subnets" {
   count                   = 2
   vpc_id                  = aws_vpc.medusa_vpc.id
@@ -25,12 +26,12 @@ resource "aws_subnet" "public_subnets" {
   map_public_ip_on_launch = true
 }
 
-# Internet Gateway
+# Internet Gateway for Public Subnets
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.medusa_vpc.id
 }
 
-# Route Table
+# Route Table for Public Subnets
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.medusa_vpc.id
 }
@@ -47,13 +48,13 @@ resource "aws_route_table_association" "public_rt_assoc" {
   route_table_id = aws_route_table.public_rt.id
 }
 
-# DB Subnet Group
+# Database Subnet Group
 resource "aws_db_subnet_group" "db_subnet_group" {
   name       = "medusa-db-subnet-group"
   subnet_ids = aws_subnet.public_subnets[*].id
 }
 
-# ECS Security Group
+# Security Group for ECS
 resource "aws_security_group" "ecs_sg" {
   name        = "ecs-security-group"
   description = "Allow HTTP traffic to Medusa"
@@ -76,16 +77,15 @@ resource "aws_security_group" "ecs_sg" {
 
 # RDS PostgreSQL Instance
 resource "aws_db_instance" "medusa_db" {
-  allocated_storage      = 20
-  engine                 = "postgres"
-  engine_version         = "14.17"
-  instance_class         = "db.t3.micro"
-  db_name                = var.db_name  # Changed from 'name' to 'db_name'
-  username               = var.db_user
-  password               = var.db_password
-  skip_final_snapshot    = true
-  publicly_accessible    = true
-  db_subnet_group_name   = aws_db_subnet_group.db_subnet_group.name
+  allocated_storage    = 20
+  engine               = "postgres"
+  engine_version       = "14.17"
+  instance_class       = "db.t3.micro"
+  username             = var.db_user
+  password             = var.db_password
+  skip_final_snapshot  = true
+  publicly_accessible  = true
+  db_subnet_group_name = aws_db_subnet_group.db_subnet_group.name
   vpc_security_group_ids = [aws_security_group.ecs_sg.id]
 }
 
@@ -94,41 +94,17 @@ resource "aws_ecs_cluster" "medusa_cluster" {
   name = "medusa-cluster"
 }
 
-# ECS Execution Role
-resource "aws_iam_role" "ecs_execution_role" {
-  name = "medusa-ecs-execution-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
-  role       = aws_iam_role.ecs_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-# ECS Task Definition (with execution role)
+# ECS Task Definition for Medusa Backend
 resource "aws_ecs_task_definition" "medusa_task" {
   family                   = "medusa-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "512"
   memory                   = "1024"
-  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-  
+
   container_definitions = jsonencode([{
     name      = "medusa",
-    image     = var.medusa_image,
+    image     = var.medusa_image,  # Now using Docker Hub
     essential = true,
     portMappings = [{
       containerPort = 9000,
@@ -137,7 +113,8 @@ resource "aws_ecs_task_definition" "medusa_task" {
     environment = [
       {
         name  = "DATABASE_URL",
-        value = "postgres://${var.db_user}:${var.db_password}@${aws_db_instance.medusa_db.address}:5432/${var.db_name}"
+        value = "postgres://${var.db_user}:${var.db_password}@${aws_db_instance.medusa_db.address}:5432/postgres"
+
       },
       {
         name  = "JWT_SECRET",
@@ -156,8 +133,8 @@ resource "aws_ecs_service" "medusa_service" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = aws_subnet.public_subnets[*].id
-    security_groups  = [aws_security_group.ecs_sg.id]
+    subnets         = aws_subnet.public_subnets[*].id
+    security_groups = [aws_security_group.ecs_sg.id]
     assign_public_ip = true
   }
 
