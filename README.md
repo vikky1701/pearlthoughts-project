@@ -32,3 +32,5 @@ docker push vikky17/medusa-backend:latest
 [![Watch the video](https://img.youtube.com/vi/lijjoWOcF6o/0.jpg)](https://youtu.be/lijjoWOcF6o)
 
 👉 **[Click here to watch the demo on YouTube](https://youtu.be/lijjoWOcF6o)**
+
+[![Watch the video](https://img.youtube.com/vi/lijjoWOcF6o/maxresdefault.jpg)](https://youtu.be/lijjoWOcF6o)
