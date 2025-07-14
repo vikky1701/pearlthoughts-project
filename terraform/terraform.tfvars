@@ -1,5 +1,5 @@
 aws_region     = "us-east-1"
 medusa_image   = "vikky17/medusa-backend:latest"
-db_user        = "myuser"
-db_password    = "mypassword"
-jwt_secret     = "591562aa74426c3f81184f504d2a0e326e6af133e8dc518de3141a785e1ddf1d"
+db_user        = "your username"
+db_password    = "your password"
+jwt_secret     = "your jwt tken"
